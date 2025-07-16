@@ -1,9 +1,11 @@
 import requests
-import json
 import configparser
+import json
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox, ttk
+
+from lib.localization import get_texts
 
 SETTINGS_FILE = 'settings.ini'
 
@@ -24,7 +26,14 @@ def load_settings():
 
 def save_settings(settings):
     config = configparser.ConfigParser()
-    config['AUTH'] = settings
+    config.read(SETTINGS_FILE)
+
+    if not config.has_section('AUTH'):
+        config.add_section('AUTH')
+
+    for key, value in settings.items():
+        config.set('AUTH', key, value)
+
     with open(SETTINGS_FILE, 'w') as configfile:
         config.write(configfile)
 
@@ -37,37 +46,40 @@ def toggle_visibility_on_focus(entry):
     entry.bind("<FocusOut>", on_focus_out)
 
 def open_settings_window(root):
+    L = get_texts()
     settings = load_settings()
 
     settings_win = tk.Toplevel(root)
-    settings_win.title("Настройки подключения")
+    settings_window_instance = settings_win
+    settings_win.title(L.get("settings_title", "Settings"))
     settings_win.grab_set()
 
-    ttk.Label(settings_win, text="Host:").grid(row=0, column=0, padx=10, pady=5, sticky='e')
+    ttk.Label(settings_win, text=L.get("host", "Host") + ":").grid(row=0, column=0, padx=10, pady=5, sticky='e')
+
     host_var = tk.StringVar(value=settings.get('host', ''))
     host_entry = ttk.Entry(settings_win, textvariable=host_var, width=50)
     host_entry.grid(row=0, column=1, padx=10, pady=5)
     toggle_visibility_on_focus(host_entry)
 
-    ttk.Label(settings_win, text="Path:").grid(row=1, column=0, padx=10, pady=5, sticky='e')
+    ttk.Label(settings_win, text=L.get("path", "Path") + ":").grid(row=1, column=0, padx=10, pady=5, sticky='e')
     path_var = tk.StringVar(value=settings.get('path', ''))
     path_entry = ttk.Entry(settings_win, textvariable=path_var, width=50, show='*')
     path_entry.grid(row=1, column=1, padx=10, pady=5)
     toggle_visibility_on_focus(path_entry)
 
-    ttk.Label(settings_win, text="Username:").grid(row=2, column=0, padx=10, pady=5, sticky='e')
+    ttk.Label(settings_win, text=L.get("username", "Username") + ":").grid(row=2, column=0, padx=10, pady=5, sticky='e')
     username_var = tk.StringVar(value=settings.get('username', ''))
     username_entry = ttk.Entry(settings_win, textvariable=username_var)
     username_entry.grid(row=2, column=1, padx=10, pady=5)
     toggle_visibility_on_focus(username_entry)
 
-    ttk.Label(settings_win, text="Password:").grid(row=3,column=0,padx=10,pady=5, sticky='e')
+    ttk.Label(settings_win, text=L.get("password", "Password") + ":").grid(row=3,column=0,padx=10,pady=5, sticky='e')
     password_var = tk.StringVar(value=settings.get('password', ''))
     password_entry = ttk.Entry(settings_win,textvariable=password_var,width=30, show='*')
     password_entry.grid(row=3,column=1,padx=10,pady=5)
     toggle_visibility_on_focus(password_entry)
 
-    ttk.Label(settings_win, text="Secret:").grid(row=4,column=0,padx=10,pady=5, sticky='e')
+    ttk.Label(settings_win, text=L.get("secret", "Secret") + ":").grid(row=4,column=0,padx=10,pady=5, sticky='e')
     secret_var = tk.StringVar(value=settings.get('secret', ''))
     secret_entry = ttk.Entry(settings_win,textvariable=secret_var,width=50, show='*')
     secret_entry.grid(row=4,column=1,padx=10,pady=5)
@@ -82,13 +94,15 @@ def open_settings_window(root):
             'secret': secret_var.get()
         }
         save_settings(new_settings)
-        messagebox.showinfo("Сохранено", "Настройки успешно сохранены.")
+        messagebox.showinfo(L.get("save", "Save"), L.get("save_success", "Settings saved successfully"))
         settings_win.destroy()
 
-    save_button = ttk.Button(settings_win,text="Сохранить", command=save)
-    save_button.grid(row=5,columnspan=2,pady=(10, 20))
+    save_button = ttk.Button(settings_win, text=L.get("save", "Save"), command=save)
+    save_button.grid(row=5, columnspan=2, pady=(10, 20))
+
 
 def fetch_data(tree, inbound_data):
+    L = get_texts()
     auth = load_settings()
 
     host = auth.get("host", "")
@@ -98,7 +112,7 @@ def fetch_data(tree, inbound_data):
     secret = auth.get("secret", "")
 
     if not all([host, base, username, password]):
-        messagebox.showwarning("Поля не заполнены", "Пожалуйста, заполните все поля в настройках.")
+        messagebox.showwarning(L.get("fields_required", "Required Fields"), L.get("fill_all_fields", "Please fill all fields in settings."))
         return
 
     login_url = f"{host}{base}/login"
@@ -122,11 +136,11 @@ def fetch_data(tree, inbound_data):
         resp = session.post(login_url, data=payload, headers=headers)
         login_data = resp.json()
     except Exception as e:
-        messagebox.showerror("Ошибка", f"Ошибка авторизации: {e}")
+        messagebox.showerror(L.get("error", "Error"), f"{L.get('auth_error', 'Authentication error')}: {e}")
         return
 
     if not login_data.get("success"):
-        messagebox.showerror("Ошибка входа", login_data.get("msg", "Не удалось войти"))
+        messagebox.showerror(L.get("login_error", "Login Error"), login_data.get("msg", L.get("login_failed", "Login failed")))
         return
 
     headers_get = {
@@ -139,7 +153,7 @@ def fetch_data(tree, inbound_data):
         r = session.get(inbounds_url, headers=headers_get)
         inbounds = r.json()
     except Exception as e:
-        messagebox.showerror("Ошибка", f"Ошибка при получении данных: {e}")
+        messagebox.showerror(L.get("error", "Error"), f"{L.get('fetch_error', 'Error fetching data')}: {e}")
         return
 
     for row in tree.get_children():
@@ -172,30 +186,30 @@ def fetch_data(tree, inbound_data):
         snip = reality.get("shortId", "-")
         fqdn = reality.get("dest", "-")
 
-        settings_str= inbound.get("settings","{}")
+        settings_str = inbound.get("settings", "{}")
         try:
-            settings_obj= json.loads(settings_str)
-            clients= settings_obj.get("clients", [])
+            settings_obj = json.loads(settings_str)
+            clients = settings_obj.get("clients", [])
         except Exception:
-            clients= []
+            clients = []
 
         for client in clients:
-            email= client.get("email","-")
-            uuid= client.get("id","-")
-            total_gb= int(client.get("totalGB",0))/1024/1024/1024
-            up_mbps= int(client.get("up",0))/1024/1024
-            down_mbps= int(client.get("down",0))/1024/1024
+            email = client.get("email", "-")
+            uuid = client.get("id", "-")
+            total_gb = int(client.get("totalGB", 0)) / 1024 / 1024 / 1024
+            up_mbps = int(client.get("up", 0)) / 1024 / 1024
+            down_mbps = int(client.get("down", 0)) / 1024 / 1024
 
-            total_limit= "Full" if total_gb==0 else f"{total_gb:.1f} GB"
-            traffic_str= f"{up_mbps:.1f} ↑ / {down_mbps:.1f} ↓ MB"
+            total_limit = "Full" if total_gb == 0 else f"{total_gb:.1f} GB"
+            traffic_str = f"{up_mbps:.1f} ↑ / {down_mbps:.1f} ↓ MB"
 
-            raw_expiry_ts= client.get("expiryTime") or inbound.get("expiryTime")
-            if isinstance(raw_expiry_ts,(int,float)) and raw_expiry_ts>0:
-                end_date_str= datetime.fromtimestamp(raw_expiry_ts/1000).strftime("%d-%m-%Y %H:%M")
+            raw_expiry_ts = client.get("expiryTime") or inbound.get("expiryTime")
+            if isinstance(raw_expiry_ts, (int, float)) and raw_expiry_ts > 0:
+                end_date_str = datetime.fromtimestamp(raw_expiry_ts / 1000).strftime("%d-%m-%Y %H:%M")
             else:
-                end_date_str="-"
+                end_date_str = "-"
 
-            row_data=[
+            row_data = [
                 email,
                 port,
                 protocol,
@@ -206,17 +220,17 @@ def fetch_data(tree, inbound_data):
             ]
             inbound_data.append(row_data)
 
-            now_dt= datetime.now()
+            now_dt = datetime.now()
             try:
-                exp_dt_obj= datetime.strptime(end_date_str,"%d-%m-%Y %H:%M")
-                delta_days= (exp_dt_obj - now_dt).days
-                if delta_days<0:
-                    tag_name="expired"
-                elif delta_days<=3:
-                    tag_name="warning"
+                exp_dt_obj = datetime.strptime(end_date_str, "%d-%m-%Y %H:%M")
+                delta_days = (exp_dt_obj - now_dt).days
+                if delta_days < 0:
+                    tag_name = "expired"
+                elif delta_days <= 3:
+                    tag_name = "warning"
                 else:
-                    tag_name="active"
+                    tag_name = "active"
             except Exception:
-                tag_name="active"
+                tag_name = "active"
 
             tree.insert("", "end", values=row_data, tags=(tag_name,))

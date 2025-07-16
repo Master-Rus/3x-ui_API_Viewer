@@ -1,0 +1,4 @@
+ttkthemes
+requests
+configparser
+datetime
