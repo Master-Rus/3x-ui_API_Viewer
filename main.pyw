@@ -31,7 +31,7 @@ root = ThemedTk(theme="breeze")
 check_for_updates_gui(root)
 
 root.title(L['title'])
-root.geometry('930x600')
+root.geometry('950x600')
 
 style = ttk.Style()
 style.configure('Treeview', font=('Segoe UI', 10), rowheight=28)
