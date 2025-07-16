@@ -38,6 +38,8 @@ L = {
     'check_failed': "Failed to check for updates.",
     'no_update': "You have the latest version installed.",
     'check_exception': "Error while checking for updates:\n{}",
+    'starting_download': "Starting downloading update...",
+    'download_failed': "Error downloading update",
     "settings_title": "Connection Settings",
     "save_success": "Settings saved successfully.",
     "fill_fields": "Please fill in all settings fields.",
